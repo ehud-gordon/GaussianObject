@@ -2,6 +2,7 @@
 
 <div align="center">
 <img src='assets/logo.png' style="height:100px"></img>
+</div>
 
 We propose GaussianObject, a framework to represent and render the 3D object with Gaussian splatting, that achieves high rendering quality with only **4 input images**.
 
