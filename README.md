@@ -3,9 +3,6 @@
 <div align="center">
 <img src='assets/logo.png' style="height:100px"></img>
 
-### [Project Page](https://gaussianobject.github.io/) | [Paper](https://raw.githubusercontent.com/GaussianObject/gaussianobject.github.io/main/assets/paper.pdf) | [Paper (Compressed)](https://raw.githubusercontent.com/GaussianObject/gaussianobject.github.io/main/assets/paper_compressed.pdf) | [Dataset](https://drive.google.com/drive/folders/1Q5duwHO3jECWK_khLnPM088BxUa3zhko)
-</div>
-
 We propose GaussianObject, a framework to represent and render the 3D object with Gaussian splatting, that achieves high rendering quality with only **4 input images**.
 
 https://github.com/GaussianObject/GaussianObject/assets/158549428/70ae2443-7a6e-4352-abf4-d3abf79779a3
@@ -46,7 +43,7 @@ git submodule update --init --recursive
 
 ### Dataset
 
-You can try GaussianObject with the Mip-NeRF360 dataset and OmniObject3D dataset. The data can be downloaded in [Google Drive](https://drive.google.com/drive/folders/1Q5duwHO3jECWK_khLnPM088BxUa3zhko).
+You can try GaussianObject with the Mip-NeRF360 dataset and OmniObject3D dataset. The data can be downloaded in [Google Drive](https://drive.google.com/drive/folders/1DUOxFybdsSYJHI5p79O_QH87TIODiJ8h).
 
 The directory structure of the dataset should be
 
@@ -73,7 +70,7 @@ GaussianObject
 └── ...
 ```
 
-`images`, `images_2`, `images_4`, `images_8` and `sparse` are from the original dataset. `masks` is the object mask generated with [SegAnyGAussians](https://github.com/Jumpat/SegAnyGAussians). `zoe_depth` and `zoe_depth_colored` are the depth maps and colored depth maps. `sparse_4.txt`, `sparse_6.txt` and `sparse_9.txt` are train set image ids and `sparse_test.txt` is the test set.
+`images`, `images_2`, `images_4`, `images_8` and `sparse` are from the original dataset. `masks` is the object mask generated with [segment-anything](https://github.com/facebookresearch/segment-anything). `zoe_depth` and `zoe_depth_colored` are the depth maps and colored depth maps. `sparse_4.txt`, `sparse_6.txt` and `sparse_9.txt` are train set image ids and `sparse_test.txt` is the test set.
 
 To test GaussianObject with your own dataset, you can manually prepare the dataset with the same directory structure. The depth maps and colored depth maps are generated with
 
