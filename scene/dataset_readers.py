@@ -9,9 +9,10 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+import os
 import sys
 import os.path as osp
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, List
 
 import cv2
 import numpy as np
@@ -34,7 +35,7 @@ class SceneInfo(NamedTuple):
     test_cameras: list
     nerf_normalization: dict
     ply_path: str
-    render_cameras: Optional[list[CameraInfo]] = None
+    render_cameras: Optional[List[CameraInfo]] = None
 
 def getNerfppNorm(cam_info):
     def get_center_and_diag(cam_centers):
@@ -151,30 +152,37 @@ def storePly(path, xyz, rgb):
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
-def readColmapSceneInfo(path, images, eval, llffhold=8, extra_opts=None):
+def readCameras(path, extra_opts, images="images", train_or_test="train"):
+    sparse_view_num = getattr(extra_opts, 'sparse_view_num', -1)
+    selected_ids=None
+    if sparse_view_num >= 0:
+        if train_or_test == "train":
+            selected_ids = np.loadtxt(osp.join(path, f"sparse_{str(sparse_view_num)}.txt"), dtype=np.int32)
+        elif train_or_test == "test":
+            selected_ids = np.loadtxt(osp.join(path, f"sparse_test.txt"), dtype=np.int32)
+
+        print(f"the sparse id is {sparse_view_num}, with {len(selected_ids)} {train_or_test} frames")
     try:
         cameras_extrinsic_file = osp.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = osp.join(path, "sparse/0", "cameras.bin")
-        cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
+        cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file, selected_ids=selected_ids)
         cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
     except:
         cameras_extrinsic_file = osp.join(path, "sparse/0", "images.txt")
         cameras_intrinsic_file = osp.join(path, "sparse/0", "cameras.txt")
-        cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
+        cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file, selected_ids=selected_ids)
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
-
+    
     reading_dir = "images" if images == None else images
     cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=osp.join(path, reading_dir), extra_opts=extra_opts)
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
+    return cam_infos
 
-    if eval:
-        train_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold != 0]
-        test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold == 0]
-    else:
-        train_cam_infos = cam_infos
-        test_cam_infos = []
+def readColmapSceneInfo(path, images, eval, llffhold=8, extra_opts=None):
+    train_cam_infos = readCameras(path, extra_opts, images=images, train_or_test="train")
+    test_cam_infos = readCameras(path, extra_opts, images=images, train_or_test="test")
 
-    render_cam_infos = generate_ellipse_path_from_camera_infos(cam_infos)
+    render_cam_infos = generate_ellipse_path_from_camera_infos(train_cam_infos)
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
@@ -192,15 +200,6 @@ def readColmapSceneInfo(path, images, eval, llffhold=8, extra_opts=None):
         pcd = fetchPly(ply_path)
     except:
         pcd = None
-
-    if hasattr(extra_opts, 'sparse_view_num') and extra_opts.sparse_view_num > 0: # means sparse setting
-        assert eval == False
-        assert osp.exists(osp.join(path, f"sparse_{str(extra_opts.sparse_view_num)}.txt")), "sparse_id.txt not found!"
-        ids = np.loadtxt(osp.join(path, f"sparse_{str(extra_opts.sparse_view_num)}.txt"), dtype=np.int32)
-        ids_test = np.loadtxt(osp.join(path, f"sparse_test.txt"), dtype=np.int32)
-        test_cam_infos = [train_cam_infos[i] for i in ids_test]
-        train_cam_infos = [train_cam_infos[i] for i in ids]
-        print("Sparse view, only {} images are used for training, others are used for eval.".format(len(ids)))
 
     # NOTE in sparse condition, we may use random points to initialize the gaussians
     if hasattr(extra_opts, 'init_pcd_name'):

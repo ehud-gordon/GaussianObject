@@ -32,6 +32,7 @@ from annotator.util import resize_image, HWC3
 from cldm.model import create_model, load_state_dict
 from minlora import add_lora, LoRAParametrization
 from threestudio.systems.base import BaseLift3DSystem
+from typing import Any, Dict
 from threestudio.utils.typing import *
 
 
@@ -378,7 +379,7 @@ class GaussianDreamer(BaseLift3DSystem):
         return torch.sort(torch.sqrt(torch.sum((T - self.all_T) ** 2, dim=-1)))[0]
 
 
-    def get_random_view_batch(self, batch: dict[str, Any]) -> dict[str, Any]:
+    def get_random_view_batch(self, batch: Dict[str, Any]) -> Dict[str, Any]:
         focal_length_x = fov2focal(batch['fovx'], batch['width'])
         focal_length_y = fov2focal(batch['fovy'], batch['height'])
         return {

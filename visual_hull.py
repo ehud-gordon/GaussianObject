@@ -153,7 +153,7 @@ if __name__=="__main__":
     parser.add_argument('--data_dir', type=str, default='sparse_nerf_datasets/sparse_omni3d_undistorted/backpack_016', help='data directory, we only support colmap type data, kitchen, garden')
     parser.add_argument("--cube_size", type=float, default=4.0, help="size of the cube in meters")
     parser.add_argument("--voxel_num", type=int, default=200, help="size of a voxel in meters")
-    parser.add_argument('--sparse_id', type=int, default=-1, help='sparse id')
+    parser.add_argument('--sparse_view_num', type=int, default=-1, help='sparse id')
     parser.add_argument('--reso', type=int, default=1, help='the resolution of image, 1 for omni3d, 4 or 8 for mip360')
     parser.add_argument('--not_vis', action='store_true', help='whether vis the visual hull, is enable, not vis')
     parser.add_argument("--cube_size_shift_x", type=float, default=0.0, help="shift sizex of the cube in meters")
@@ -164,25 +164,19 @@ if __name__=="__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     extra_opts = Namespace()
-    extra_opts.sparse_view_num = -1
     extra_opts.resolution = args.reso
     extra_opts.use_mask = True
     extra_opts.data_device = 'cuda'
     extra_opts.init_pcd_name = 'origin'
     extra_opts.white_background = False
+    extra_opts.sparse_view_num = args.sparse_view_num    
 
     # load the camera parameters
     # we assume that the camera parameters are stored in the data_dir
     scene_info = sceneLoadTypeCallbacks["Colmap"](args.data_dir, 'images', False, extra_opts=extra_opts) 
     camlist = cameraList_from_camInfos(scene_info.train_cameras, 1.0, extra_opts)
 
-    # if sparse id is not zero, we only use given frames to construct the visual hull
-    if args.sparse_id >= 0:
-        selected_id = np.loadtxt(os.path.join(args.data_dir, f"sparse_{str(args.sparse_id)}.txt"), dtype=np.int32)
-        print("the sparse id is {}, with {} frames".format(args.sparse_id, len(selected_id)))
-        assert args.sparse_id == len(selected_id)
-    else:
-        selected_id = np.arange(len(camlist))
+    selected_id = np.arange(len(camlist))
 
     # get all camera locations to recenter the scene
     cam_locations = []
@@ -248,7 +242,7 @@ if __name__=="__main__":
 
     if not args.not_vis:
         Ts = np.array([i.cpu().numpy() for i in Ts])
-        Ks = np.array(Ks_clone)
+        Ks = np.array([k.cpu().numpy() for k in Ks_clone])
         cameras = ct.camera.create_camera_frames(Ks, Ts, highlight_color_map={0: [1, 0, 0], -1: [0, 1, 0]})
         # build LineSet to represent the coordinate
         world_coord = o3d.geometry.LineSet()
@@ -268,7 +262,8 @@ if __name__=="__main__":
         viewer.add_geometry(pcd)
         viewer.add_geometry(world_coord)
     
-        opt = viewer.get_render_option()
-        opt.background_color = np.asarray([0.5, 0.5, 0.5])
-        viewer.run()
-        viewer.destroy_window()
+        
+        # opt = viewer.get_render_option()
+        # opt.background_color = np.asarray([0.5, 0.5, 0.5])
+        # viewer.run()
+        # viewer.destroy_window()

@@ -63,14 +63,7 @@ class LooDataset(Dataset):
         self.around_gt_steps = self.cfg.around_gt_steps
         self.refresh_interval = self.cfg.refresh_interval
         self.refresh_size = self.cfg.refresh_size
-
-        cameras_extrinsic_file = os.path.join(self.data_dir, "sparse/0", "images.bin")
-        cameras_intrinsic_file = os.path.join(self.data_dir, "sparse/0", "cameras.bin")
-        cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
-        cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
-        cam_extrinsics_unsorted = list(cam_extrinsics.values())
-        cam_extrinsics = sorted(cam_extrinsics_unsorted.copy(), key = lambda x : x.name)
-
+        
         self.sparse_ids = []
         if self.sparse_num != 0:
             if self.split == 'train':
@@ -79,6 +72,15 @@ class LooDataset(Dataset):
             else:
                 with open(os.path.join(self.data_dir, f'sparse_test.txt')) as f:
                     self.sparse_ids = sorted([int(id) for id in f.readlines()])
+
+        cameras_extrinsic_file = os.path.join(self.data_dir, "sparse/0", "images.bin")
+        cameras_intrinsic_file = os.path.join(self.data_dir, "sparse/0", "cameras.bin")
+        cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file, selected_ids=self.sparse_ids)
+        cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
+        cam_extrinsics_unsorted = list(cam_extrinsics.values())
+        cam_extrinsics = sorted(cam_extrinsics_unsorted.copy(), key = lambda x : x.name)
+
+        
 
         images_folder=os.path.join(self.data_dir, 'images')
         if self.resolution in [1, 2, 4, 8]:
@@ -94,8 +96,11 @@ class LooDataset(Dataset):
 
         self.Rs, self.Ts, self.heights, self.widths, self.fovxs, self.fovys, self.images, self.masks, self.depths = [], [], [], [], [], [], [], [], []
         cam_c = []
-        for idx, extr in enumerate(cam_extrinsics):
-            if idx in self.sparse_ids:
+        for extr in cam_extrinsics:
+            img_file_num = int(
+                "".join([s for s in os.path.basename(extr.name) if s.isdigit()])
+                )
+            if img_file_num in self.sparse_ids:
                 intr = cam_intrinsics[extr.camera_id]
                 height = intr.height
                 width = intr.width
@@ -240,8 +245,8 @@ class LooDataModuleFromConfig(pl.LightningDataModule):
     def setup(self, stage=None) -> None:
         if stage in [None, "fit"]:
             self.train_dataset = LooDataset(self.cfg, "train", sparse_num=self.cfg.sparse_num)
-        if stage in [None, "fit", "validate"]:
-            self.val_dataset = LooDataset(self.cfg, "val", sparse_num=self.cfg.sparse_num)
+        # if stage in [None, "fit", "validate"]:
+        #     self.val_dataset = LooDataset(self.cfg, "val", sparse_num=self.cfg.sparse_num)
         if stage in [None, "test", "predict"]:
             self.test_dataset = LooDataset(self.cfg, "test", sparse_num=self.cfg.sparse_num)
 

@@ -1,0 +1,230 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "visual hull",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "visual_hull.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--sparse_view_num", "4",
+                "--data_dir", "data/helmet2",
+                "--reso", "1",
+                "--not_vis"
+            ],
+            "env": {
+                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
+            }
+        },
+        {  
+            "name": "train gs coarse",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_gs.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-s", "data/helmet2",
+                "-m", "output/gs_init/helmet2",
+                "-r", "1",
+                "--sparse_view_num", "4",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_4",
+                "--white_background",
+                "--checkpoint_iterations", "1000", "3000", "7000", "10000",
+            ],
+            "env": {
+                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
+            }
+        },
+        {
+            "name": "render train set",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "render.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-m", "output/gs_init/helmet2",
+                "--sparse_view_num", "4",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_4",
+                "--white_background",
+                "--skip_all",
+                "--skip_test"
+            ],
+            "env": {
+                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
+            }
+        },
+        {
+            "name": "render test set",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "render.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-m", "output/gs_init/helmet2",
+                "--sparse_view_num", "4",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_4",
+                "--white_background",
+                "--skip_all",
+                "--skip_train"
+            ],
+            "env": {
+                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
+            }
+        },
+        {
+            "name": "leave-one stage1",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "leave_one_out_stage1.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-s", "data/helmet2",
+                "-m", "output/gs_init/helmet2_loo",
+                "-r", "1",
+                "--sparse_view_num", "4",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_4",
+                "--white_background",
+            ],
+            "env": {
+                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
+            }
+        },
+        {
+            "name": "leave-one stage2",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "leave_one_out_stage2.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-s", "data/helmet2",
+                "-m", "output/gs_init/helmet2_loo",
+                "-r", "1",
+                "--sparse_view_num", "4",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_4",
+                "--white_background",
+            ],
+            "env": {
+                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
+            }
+        },
+        {
+            "name": "train lora",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_lora.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--exp_name", "controlnet_finetune/helmet2",
+                "--prompt", "xxy5syt00",
+                "--sh_degree", "3",
+                "--resolution", "1",
+                "--sparse_num", "4",
+                "--data_dir", "data/helmet2",
+                "--gs_dir", "output/gs_init/helmet2",
+                "--loo_dir", "output/gs_init/helmet2_loo",
+                "--bg_white",
+                "--sd_locked",
+                "--train_lora",
+                "--use_prompt_list",
+                "--add_diffusion_lora",
+                "--add_control_lora",
+                "--add_clip_lora"
+            ],
+            "env": {
+                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
+            }
+        },
+        {
+            "name": "train repair",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_repair.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config", "configs/gaussian-object.yaml",
+                "--train",
+                "--gpu", "0",
+                "tag=helmet2",
+                "system.init_dreamer=output/gs_init/helmet2",
+                "system.exp_name=output/controlnet_finetune/helmet2",
+                "system.refresh_size=8",
+                "data.data_dir=data/helmet2",
+                "data.resolution=1",
+                "data.sparse_num=4",
+                "data.prompt=a photo of a xxy5syt00",
+                "data.refresh_size=8",
+                "system.sh_degree=3"
+            ],
+            "env": {
+                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
+            }
+        },
+        {
+            "name": "render test lastply", 
+            "type": "debugpy",
+            "request": "launch",
+            "program": "render.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-m", "output/gs_init/helmet2",
+                "--sparse_view_num", "4",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_4",
+                "--white_background",
+                "--skip_all",
+                "--skip_train",
+                "--load_ply", "output/gaussian_object/helmet2/save/last.ply"
+            ],
+        },
+        {
+            "name": "render train lastply", 
+            "type": "debugpy",
+            "request": "launch",
+            "program": "render.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-m", "output/gs_init/helmet2",
+                "--sparse_view_num", "4",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_4",
+                "--white_background",
+                "--skip_all",
+                "--skip_test",
+                "--load_ply", "output/gaussian_object/helmet2/save/last.ply"
+            ],
+        },
+        {
+            "name": "render path last",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "render.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-m", "output/gs_init/helmet2",
+                "--sparse_view_num", "4",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_4",
+                "--white_background",
+                "--render_path",
+                "--load_ply", "output/gaussian_object/helmet2/save/last.ply",
+            ],
+        }
+        // current file
+        {
+            "name": "current file",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+        }
+    ]
+}

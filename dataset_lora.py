@@ -160,17 +160,19 @@ class GSCacheDataset(Dataset):
         self.gaussian.load_ply(ply_path, False)
         self.parser = ArgumentParser(description="Training script parameters")
         self.pipe = PipelineParams(self.parser)
+        
+        sparse_ids = []
+        with open(os.path.join(self.data_dir, f'sparse_{self.sparse_num}.txt')) as f:
+            sparse_ids = [int(id) for id in f.readlines()]
 
         cameras_extrinsic_file = os.path.join(self.data_dir, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(self.data_dir, "sparse/0", "cameras.bin")
-        cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
+        cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file, selected_ids=sparse_ids)
         cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
         cam_extrinsics_unsorted = list(cam_extrinsics.values())
         cam_extrinsics = sorted(cam_extrinsics_unsorted.copy(), key = lambda x : x.name)
 
-        sparse_ids = []
-        with open(os.path.join(self.data_dir, f'sparse_{self.sparse_num}.txt')) as f:
-            sparse_ids = [int(id) for id in f.readlines()]
+        
 
         images_folder = os.path.join(self.data_dir, 'images')
         if self.resolution in [1, 2, 4, 8]:

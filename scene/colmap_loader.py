@@ -12,6 +12,7 @@
 import numpy as np
 import collections
 import struct
+import os
 from typing import Dict
 
 CameraModel = collections.namedtuple(
@@ -178,7 +179,7 @@ def read_intrinsics_text(path):
                                             params=params)
     return cameras
 
-def read_extrinsics_binary(path_to_model_file):
+def read_extrinsics_binary(path_to_model_file, selected_ids=None):
     """
     see: src/base/reconstruction.cc
         void Reconstruction::ReadImagesBinary(const std::string& path)
@@ -190,7 +191,7 @@ def read_extrinsics_binary(path_to_model_file):
         for _ in range(num_reg_images):
             binary_image_properties = read_next_bytes(
                 fid, num_bytes=64, format_char_sequence="idddddddi")
-            image_id = binary_image_properties[0]
+            image_id = binary_image_properties[0]     
             qvec = np.array(binary_image_properties[1:5])
             tvec = np.array(binary_image_properties[5:8])
             camera_id = binary_image_properties[8]
@@ -206,6 +207,11 @@ def read_extrinsics_binary(path_to_model_file):
             xys = np.column_stack([tuple(map(float, x_y_id_s[0::3])),
                                    tuple(map(float, x_y_id_s[1::3]))])
             point3D_ids = np.array(tuple(map(int, x_y_id_s[2::3])))
+            img_file_num = int(
+                "".join([s for s in os.path.basename(image_name) if s.isdigit()])
+                )
+            if selected_ids is not None and img_file_num not in selected_ids:
+                continue
             images[image_id] = Image(
                 id=image_id, qvec=qvec, tvec=tvec,
                 camera_id=camera_id, name=image_name,
@@ -238,11 +244,13 @@ def read_intrinsics_binary(path_to_model_file):
                                         width=width,
                                         height=height,
                                         params=np.array(params))
+            pass
+            
         assert len(cameras) == num_cameras
     return cameras
 
 
-def read_extrinsics_text(path):
+def read_extrinsics_text(path, selected_ids=None):
     """
     Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
     """
@@ -260,6 +268,8 @@ def read_extrinsics_text(path):
                 tvec = np.array(tuple(map(float, elems[5:8])))
                 camera_id = int(elems[8])
                 image_name = elems[9]
+                if selected_ids is not None and image_id not in selected_ids:
+                    continue
                 elems = fid.readline().split()
                 xys = np.column_stack([tuple(map(float, elems[0::3])),
                                        tuple(map(float, elems[1::3]))])

@@ -179,8 +179,8 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) # , stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
 
         # Remove the original videos
-        os.remove(renders_path)
-        os.remove(gt_path)
+        # os.remove(renders_path) # TODO ehud fix
+        # os.remove(gt_path) # TODO ehud fix
 
         # use opencv generate depth video
         # import pdb
