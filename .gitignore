@@ -9,3 +9,4 @@ data/*
 v1-5-pruned.ckpt
 control_v11f1e_sd15_tile.pth
 stam*
+.ipynb_checkpoints
