@@ -336,20 +336,20 @@ class RandomCameraSampler:
             elif theta > 2 * np.pi:
                 theta -= 2 * np.pi
             samples.append(self.sample(theta))
-        return samples
+        return samples # list of len gt, each element is a tuple of (R,T), with (3,3) and (3,)
 
     def sample(self, theta: Optional[float] = None):
         if theta is None:
             theta = np.random.uniform(0, 2 * np.pi)
 
-        position = self.get_position(theta)
-        pose = np.array(viewmatrix(position - self.center, self.up, position))
+        position = self.get_position(theta) #(3,) position
+        pose = np.array(viewmatrix(position - self.center, self.up, position)) #(3,4)
         pose = invert_transform_poses_pca(pose, self.transform, self.scale_factor)
-        pose[..., 1:3] *= -1
+        pose[..., 1:3] *= -1 
 
-        R = pose[:3, :3]
+        R = pose[:3, :3] # (3,3)
         c2w = np.eye(4)
         c2w[:3, :4] = pose
         T = np.linalg.inv(c2w)[:3, 3]
-
-        return R, T
+        # returns sampled R,T given theta
+        return R, T #(3,3), (3,)

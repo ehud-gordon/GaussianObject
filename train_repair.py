@@ -94,14 +94,14 @@ def main(args, extras) -> None:
     pl.seed_everything(cfg.seed + get_rank(), workers=True)
 
     # pre load dataset for scene info
-    dm = threestudio.find(cfg.data_type)(cfg.data)
+    dm = threestudio.find(cfg.data_type)(cfg.data) # loo-datamodule
     gt_ds = threestudio.find(cfg.dataset_type)(cfg.data, sparse_num=cfg.data.sparse_num)
     cfg.system.scene_extent = gt_ds.get_scene_extent()['radius'] # type: ignore
 
-    system: BaseSystem = threestudio.find(cfg.system_type)(
+    system: BaseSystem = threestudio.find(cfg.system_type)( # gaussian-object-system
         cfg.system, resumed=cfg.resume is not None
     )
-    system.set_save_dir(os.path.join(cfg.trial_dir, "save"))
+    system.set_save_dir(os.path.join(cfg.trial_dir, "save")) # trial_dir is output/gaussian_object/helmet2@timestamp
 
     callbacks = []
     if args.train:

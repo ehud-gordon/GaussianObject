@@ -56,13 +56,13 @@ class LooDataset(Dataset):
         super().__init__()
         self.cfg = cfg
         self.split = split
-        self.data_dir = self.cfg.data_dir
+        self.data_dir = self.cfg.data_dir # data/helmet2
         self.resolution = self.cfg.resolution
         self.sparse_num = sparse_num
-        self.length = self.cfg.length
-        self.around_gt_steps = self.cfg.around_gt_steps
-        self.refresh_interval = self.cfg.refresh_interval
-        self.refresh_size = self.cfg.refresh_size
+        self.length = self.cfg.length # 4000
+        self.around_gt_steps = self.cfg.around_gt_steps # 2800
+        self.refresh_interval = self.cfg.refresh_interval # 200
+        self.refresh_size = self.cfg.refresh_size # 8
         
         self.sparse_ids = []
         if self.sparse_num != 0:
@@ -176,9 +176,10 @@ class LooDataset(Dataset):
         dis_from_gt = 0.8
         threestudio.info(f'refresh random poses with dis_drom_gt={dis_from_gt} at step {self.cnt}')
         self.random_poses = []
-        while len(self.random_poses) < self.refresh_size:
-            self.random_poses.extend(self.camera_sampler.sample_away_from_gt(dis_from_gt))
-        self.random_poses = self.random_poses[:self.refresh_size]
+        while len(self.random_poses) < self.refresh_size: # refresh_size=8
+            samples = self.camera_sampler.sample_away_from_gt(dis_from_gt) # list of len gt, each element is a tuple of (R,T), with (3,3) and (3,)
+            self.random_poses.extend(samples)
+        self.random_poses = self.random_poses[:self.refresh_size] # list of len self.refresh_size, each element is a tuple of (R,T), with (3,3) and (3,)
 
     def __len__(self):
         if self.split == 'train':
@@ -192,9 +193,9 @@ class LooDataset(Dataset):
         if self.split == 'train':
             idx = random.randint(0, len(self.sparse_ids) - 1)
             random_index = random.randint(0, self.refresh_size - 1)
-            if self.cnt < self.around_gt_steps:
+            if self.cnt < self.around_gt_steps: # 2800
                 if self.cnt % self.cfg.refresh_interval == 0:
-                    self.refresh_random_poses()
+                    self.refresh_random_poses() # self.random_poses will contain len refresh_size random poses - each pose a tuple (R,T), where R(3,3), T (3,)
                 random_R, random_T = self.random_poses[random_index]
             else:
                 random_R, random_T = self.camera_sampler.sample(None)

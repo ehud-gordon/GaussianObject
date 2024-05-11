@@ -1,6 +1,6 @@
 name: "gaussian_object"
 tag: "${rmspace:${system.prompt_processor.prompt},_}"
-use_timestamp: False
+use_timestamp: True
 exp_root_dir: "output"
 seed: 0
  

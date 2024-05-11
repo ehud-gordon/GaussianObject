@@ -211,6 +211,7 @@ class GaussianDreamer(BaseLift3DSystem):
 
         # controlnet cache
         self.controlnet_outs: List[torch.Tensor] = []
+        self.controlnet_ins: List[torch.Tensor] = []
         self.sds_ws: List[torch.Tensor] = []
         self.all_T: torch.Tensor = torch.zeros((0, 3))
         self.max_cam_dis: float = 0.
@@ -397,6 +398,7 @@ class GaussianDreamer(BaseLift3DSystem):
         }
 
     def training_step(self, batch, batch_idx):
+        # compute max distance between cameras if it wasn't computed before
         if self.max_cam_dis == 0.:
             Ts = batch['gt_Ts']
             self.all_T = torch.cat(Ts)
@@ -405,6 +407,7 @@ class GaussianDreamer(BaseLift3DSystem):
                 self.max_cam_dis = max(self.max_cam_dis, distances[2].cpu().item())
             # TODO: magic number here
             self.max_cam_dis *= 1.2
+        # update controlnet_outs, every refresh_interval steps (200), if lower than both around_gt_steps (2800) and ctrl_steps (2800), 
         if self.global_step % self.cfg.refresh_interval == 0 and self.global_step <= self.cfg.around_gt_steps and self.global_step < self.ctrl_steps:
             if self.global_step > 0:
                 for idx, controlnet_out in enumerate(self.controlnet_outs):
@@ -412,9 +415,12 @@ class GaussianDreamer(BaseLift3DSystem):
                         controlnet_out = torch.zeros((1, 3, self.novel_image_size, self.novel_image_size), device='cuda')
                         self.controlnet_outs[idx] = controlnet_out
                 controlnet_outs_image = make_grid(torch.cat(self.controlnet_outs, dim=0), nrow=5)
+                controlnet_ins_image = make_grid(torch.cat(self.controlnet_ins, dim=0), nrow=5)
                 save_image(controlnet_outs_image, self.get_save_path(f"controlnet_out/it{self.true_global_step}.png"))
+                save_image(controlnet_ins_image, self.get_save_path(f"controlnet_out/it{self.true_global_step}_in.png"))
             self.controlnet_outs = []
-            if self.global_step < self.cfg.around_gt_steps:
+            self.controlnet_ins = []
+            if self.global_step < self.cfg.around_gt_steps: # around_gt_steps=2800
                 if len(self.gt_features_all) == 0:
                     for gt_image in batch['gt_images']:
                         with torch.no_grad():
@@ -446,7 +452,8 @@ class GaussianDreamer(BaseLift3DSystem):
                         eta = 1.0,
                         denoise_strength = denoise_strength
                     )
-                    best_controlnet_out = controlnet_outs[0]
+                    best_controlnet_out = controlnet_outs[0] # (512,512,3)
+                    best_controlnet_out_input_tensor = image # image is (3,512,512)
                     best_controlnet_out_score = 0.
                     for controlnet_out in controlnet_outs:
                         with torch.no_grad():
@@ -455,7 +462,8 @@ class GaussianDreamer(BaseLift3DSystem):
                         if score > best_controlnet_out_score:
                             best_controlnet_out = controlnet_out
                             best_controlnet_out_score = score
-                    self.controlnet_outs.append(self.pil_to_tensor(best_controlnet_out).to(torch.float32).unsqueeze(0).cuda())
+                    self.controlnet_outs.append(self.pil_to_tensor(best_controlnet_out).to(torch.float32).unsqueeze(0).cuda()) #(1,3,512,512)
+                    self.controlnet_ins.append(best_controlnet_out_input_tensor.unsqueeze(0))
                     self.sds_ws.append(sds_w)
 
         self.gaussian.update_learning_rate(self.true_global_step)
@@ -507,7 +515,7 @@ class GaussianDreamer(BaseLift3DSystem):
                         self.sds_ws[batch['index'][idx]] = sds_w
                     controlnet_outs.append(controlnet_out)
                     sds_ws.append(sds_w)
-            else:
+            else: # global_step > around_gt_steps
                 for idx, image in enumerate(images):
                     image_np = np.array(self.tensor_to_pil(image))
                     denoise_strength = random.random() * (self.cfg.max_strength - self.cfg.min_strength) + self.cfg.min_strength
