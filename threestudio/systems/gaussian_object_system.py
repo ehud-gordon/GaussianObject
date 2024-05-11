@@ -36,6 +36,56 @@ from typing import Any, Dict
 from threestudio.utils.typing import *
 
 
+import torch
+# import torch.nn.functional as F
+@torch.no_grad()
+def gaussian_kernel(size, sigma):
+    """Creates a Gaussian kernel using the specified size and sigma."""
+    range = torch.arange(size).float() - (size - 1) / 2
+    grid = torch.meshgrid([range, range])
+    kernel = torch.exp(-(grid[0]**2 + grid[1]**2) / (2 * sigma*2))
+    kernel = kernel / torch.sum(kernel)
+    return kernel
+@torch.no_grad()
+def repair_image_tensor(image):
+    image = image.squeeze(0)
+    # Ensure image is on the GPU and in the correct format
+    if not image.is_cuda:
+        print("Image is not on GPU. Please transfer it to GPU.")
+        return
+
+    # Normalize the image data range from [0, 1] (if not already)
+    if image.max() > 1:
+        image = image / 255.0
+
+    # Add a batch dimension [B, C, H, W]
+    image = image.unsqueeze(0)
+
+    # Prepare Gaussian kernel for blurring
+    kernel_size = 5
+    sigma = 1.0
+    blur_kernel = gaussian_kernel(kernel_size, sigma).to(image.device)
+    blur_kernel = blur_kernel.expand(3, 1, kernel_size, kernel_size)  # Expand across the color channels
+
+    # Smoothen the image using Gaussian blur
+    smoothed_image = F.conv2d(image, blur_kernel, padding=kernel_size//2, groups=3)
+
+    # Define a sharpening kernel
+    sharpening_kernel = torch.tensor([[-1, -1, -1],
+                                      [-1, 9, -1],
+                                      [-1, -1, -1]], device=image.device).float()
+    sharpening_kernel = sharpening_kernel.repeat(3, 1).reshape(3, 1, 3, 3)
+
+    # Apply the sharpening kernel to the smoothed image
+    sharpened_image = F.conv2d(smoothed_image, sharpening_kernel, padding=1, groups=3)
+
+    # Remove the batch dimension before returning
+    sharpened_image = sharpened_image.squeeze(0)
+    sharpened_image *= 255.0  # Revert back to the original data range
+
+    return sharpened_image
+
+
 @torch.no_grad()
 def process(
     model,
@@ -428,7 +478,7 @@ class GaussianDreamer(BaseLift3DSystem):
                         with torch.no_grad():
                             gt_features = self.clip_model.encode_image(self.clip_preprocess(self.tensor_to_pil(gt_image[0])).unsqueeze(0).to(self.device))
                         self.gt_features_all.append(gt_features)
-                for R,T in batch['our_random_poses']:
+                for R,T in batch['random_poses']:
                     controlent_batch = batch.copy()
                     controlent_batch['random_R'] = R
                     controlent_batch['random_T'] = T
@@ -464,7 +514,8 @@ class GaussianDreamer(BaseLift3DSystem):
                         if score > best_controlnet_out_score:
                             best_controlnet_out = controlnet_out
                             best_controlnet_out_score = score
-                    self.controlnet_outs.append(self.pil_to_tensor(best_controlnet_out).to(torch.float32).unsqueeze(0).cuda()) #(1,3,512,512)
+                    # self.controlnet_outs.append(self.pil_to_tensor(best_controlnet_out).to(torch.float32).unsqueeze(0).cuda()) #(1,3,512,512)
+                    self.controlnet_outs.append(repair_image_tensor(image).unsqueeze(0)) # TODO ours
                     self.controlnet_ins.append(best_controlnet_out_input_tensor.unsqueeze(0))
                     self.sds_ws.append(sds_w)
 
@@ -514,6 +565,7 @@ class GaussianDreamer(BaseLift3DSystem):
                         )
                         controlnet_out = self.pil_to_tensor(controlnet_out).to(torch.float32).unsqueeze(0).cuda()
                         self.controlnet_outs[batch['index'][idx]] = controlnet_out
+                        self.controlnet_outs[batch['index'][idx]] = repair_image_tensor(image).unsqueeze(0) # TODO OURS
                         self.sds_ws[batch['index'][idx]] = sds_w
                     controlnet_outs.append(controlnet_out)
                     sds_ws.append(sds_w)
@@ -546,7 +598,9 @@ class GaussianDreamer(BaseLift3DSystem):
                         if score > best_controlnet_out_score:
                             best_controlnet_out = controlnet_out
                             best_controlnet_out_score = score
-                    controlnet_outs.append(self.pil_to_tensor(best_controlnet_out).to(torch.float32).unsqueeze(0).cuda())
+                    # TODO OURS
+                    # controlnet_outs.append(self.pil_to_tensor(best_controlnet_out).to(torch.float32).unsqueeze(0).cuda())
+                    controlnet_outs.append(repair_image_tensor(image).unsqueeze(0)) # TODO OURS
                     sds_ws.append(sds_w)
                 if self.global_step % self.cfg.refresh_interval == 0 and self.global_step != self.cfg.around_gt_steps:
                     controlnet_outs_image = make_grid(torch.cat(controlnet_outs, dim=0), nrow=min(5, len(controlnet_outs)))

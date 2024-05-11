@@ -4,6 +4,8 @@ import os
 import sys
 
 
+
+
 class ColoredFilter(logging.Filter):
     """
     A logging filter to add color to certain log levels.
