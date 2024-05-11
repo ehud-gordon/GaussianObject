@@ -182,7 +182,7 @@
                 "--white_background",
                 "--skip_all",
                 "--skip_train",
-                "--load_ply", "output/gaussian_object/helmet2/save/last.ply"
+                "--load_ply", "output/gaussian_object/helmet2@20240511-125131/save/last.ply"
             ],
         },
         {

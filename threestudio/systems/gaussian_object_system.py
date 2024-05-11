@@ -19,7 +19,7 @@ from arguments import PipelineParams, OptimizationParams
 from scene.cameras import Render_Camera
 from utils.sh_utils import SH2RGB
 from utils.loss_utils import l1_loss, l2_loss, ssim, monodisp
-from utils.graphics_utils import focal2fov, fov2focal
+from utils.graphics_utils import focal2fov, fov2focal, getWorld2View2
 from scene.gaussian_model import BasicPointCloud
 from plyfile import PlyData, PlyElement
 from torch import nn
@@ -397,6 +397,8 @@ class GaussianDreamer(BaseLift3DSystem):
             'txt': batch['txt']
         }
 
+
+    
     def training_step(self, batch, batch_idx):
         # compute max distance between cameras if it wasn't computed before
         if self.max_cam_dis == 0.:
@@ -426,7 +428,7 @@ class GaussianDreamer(BaseLift3DSystem):
                         with torch.no_grad():
                             gt_features = self.clip_model.encode_image(self.clip_preprocess(self.tensor_to_pil(gt_image[0])).unsqueeze(0).to(self.device))
                         self.gt_features_all.append(gt_features)
-                for R, T in batch['random_poses']:
+                for R,T in batch['our_random_poses']:
                     controlent_batch = batch.copy()
                     controlent_batch['random_R'] = R
                     controlent_batch['random_T'] = T

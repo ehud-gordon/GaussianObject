@@ -10,6 +10,7 @@ from PIL import Image
 from dataclasses import dataclass
 from torch.utils.data import DataLoader, Dataset
 
+from scene.cameras import Render_Camera
 import threestudio
 from threestudio import register
 from threestudio.utils.config import parse_structured
@@ -18,7 +19,80 @@ from scene.colmap_loader import read_extrinsics_binary, read_intrinsics_binary, 
 from utils.camera_utils import resize_mask_image, load_raw_depth
 from utils.graphics_utils import getWorld2View2, focal2fov
 from .random_camera_sampler import RandomCameraSampler
+from scipy.spatial.transform import Rotation 
 
+def myC2W_correct(R_c_to_w, T):
+    """ returns camera to world matrix """
+    Rt = np.zeros((4, 4))
+    Rt[:3, :3] = R_c_to_w
+    Rt[:3, 3] = R_c_to_w.matmul(-T)
+    Rt[3, 3] = 1.0
+    return np.float32(Rt)
+
+def find_tangent_vectors(normal):
+    
+    # Create a vector that is not parallel to the normal vector
+    if normal[0] == 0 and normal[1] == 0:
+        vec1 = np.cross(normal, np.array([1, 0, 0]))
+    else:
+        vec1 = np.cross(normal, np.array([0, 0, 1]))
+    
+    # Normalize the first tangent vector
+    vec1 = vec1 / np.linalg.norm(vec1)
+    
+    # Use the cross product to find the second orthogonal vector in the tangent plane
+    vec2 = np.cross(normal, vec1)
+    vec2 = vec2 / np.linalg.norm(vec2)
+    
+    return vec1, vec2
+
+def update_projection_matrix(viewpoint_cam, theta_x, theta_y, radius=10):
+    """" description: 
+    viewpoint.R: rotation matrix from camera to world coordinate system
+    viewpoint.T: translation vector t=-R^T*t from world to camera (after rotation)
+    viewpoint.camera_center: camera position in world coordinate system
+    
+    theta: rotation angle in radians
+    radius: distance from the camera to the center of the rotation
+    at: point in the world coordinate system that the camera is looking at (rotation point)
+    
+    Rotation:
+    rotation performed relative to at point and around x-y arbitrary axis in the tangent plane at at's position
+    
+    USAGE: 
+    M_ext, full_proj_transform, R_new, new_eye = update_projection_matrix(cam, theta_x=theta_x, theta_y=theta_y, radius=4)
+    # 
+    """
+    # projection_matrix = viewpoint_cam.projection_matrix
+
+    c2w = myC2W_correct(viewpoint_cam.R, viewpoint_cam.T)
+
+    eye = c2w[:3, 3] # camera position in world coordinate system 
+
+    # eye = c2w[:3, 3] - last row is the translation vector in world coordinate system after rotation t=-R^T*t (in code: R from camera to world)
+    
+    normal = c2w[:3, 2]/np.linalg.norm(c2w[:3, 2])
+    
+    at = eye + normal * radius
+    
+    rotation_vec = eye - at
+    
+    vec1, vec2 = find_tangent_vectors(normal)
+    
+    rotation_matrix = Rotation.from_rotvec(vec1*theta_x)
+    rotation_matrix *= Rotation.from_rotvec(vec2*theta_y)
+    rotated_vec = rotation_matrix.apply(rotation_vec)
+    new_eye = at + rotated_vec
+    R_new = rotation_matrix.as_matrix().T @ c2w[:3, :3] # NOTE: rotation_matrix.as_matrix() is in world2camera. R is in camera2world
+    R_new = rotation_matrix.as_matrix() @ c2w[:3, :3]
+    
+    T = -R_new.T @ new_eye
+    world_view_transform = torch.tensor(getWorld2View2(R_new, T, translate=viewpoint_cam.trans.numpy(), scale=viewpoint_cam.scale)).transpose(0, 1).cuda()
+    full_proj_transform = world_view_transform.unsqueeze(0).bmm(viewpoint_cam.projection_matrix.unsqueeze(0)).squeeze(0)
+
+    # convert to torch with original dtype and device 
+    new_eye = torch.tensor(new_eye, dtype=viewpoint_cam.camera_center.dtype, device=viewpoint_cam.camera_center.device)
+    return world_view_transform, full_proj_transform, R_new, new_eye, T
 
 def getNerfppNorm(cam_centers):
     def get_center_and_diag(cam_centers):
@@ -63,6 +137,7 @@ class LooDataset(Dataset):
         self.around_gt_steps = self.cfg.around_gt_steps # 2800
         self.refresh_interval = self.cfg.refresh_interval # 200
         self.refresh_size = self.cfg.refresh_size # 8
+        self.gt_cameras = []
         
         self.sparse_ids = []
         if self.sparse_num != 0:
@@ -153,6 +228,7 @@ class LooDataset(Dataset):
 
                 self.heights.append(image.shape[-2])
                 self.widths.append(image.shape[-1])
+                self.gt_cameras.append(Render_Camera(torch.from_numpy(R), torch.from_numpy(T), FovX, FovY, image, loaded_mask, loaded_depth, white_background = True))
 
         all_Rs = []
         all_Ts = []
@@ -173,13 +249,24 @@ class LooDataset(Dataset):
 
     def refresh_random_poses(self):
         self.random_poses = []
+        self.our_random_poses = []
+        cnt = 0
+
         dis_from_gt = 0.8
         threestudio.info(f'refresh random poses with dis_drom_gt={dis_from_gt} at step {self.cnt}')
         self.random_poses = []
         while len(self.random_poses) < self.refresh_size: # refresh_size=8
             samples = self.camera_sampler.sample_away_from_gt(dis_from_gt) # list of len gt, each element is a tuple of (R,T), with (3,3) and (3,)
             self.random_poses.extend(samples)
+            # our update
+            for i in range(len(self.gt_cameras)):
+                gt_camera = self.gt_cameras[i]
+                theta_x = np.random.uniform(-np.pi/10, np.pi/10)
+                theta_y = np.random.uniform(-np.pi/10, np.pi/10)
+                world_view_transform, full_proj_transform, R_new, new_eye, T_new = update_projection_matrix(gt_camera, theta_x, theta_y, radius=4)
+                self.our_random_poses.append((R_new, T_new))
         self.random_poses = self.random_poses[:self.refresh_size] # list of len self.refresh_size, each element is a tuple of (R,T), with (3,3) and (3,)
+        self.our_random_poses = self.our_random_poses[:self.refresh_size]
 
     def __len__(self):
         if self.split == 'train':
@@ -222,6 +309,7 @@ class LooDataset(Dataset):
             "random_poses": self.random_poses,
             "gt_images": self.images,
             "gt_Ts": self.Ts,
+            "our_random_poses": self.our_random_poses
         }
         return ret
 
