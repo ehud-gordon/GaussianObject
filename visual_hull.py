@@ -235,8 +235,8 @@ if __name__=="__main__":
 
     pcd, bbox_new = get_visual_hull(64, [enlarged_bbox_min, enlarged_bbox_max], scene_info, [0,0,0])
     # save the pointcloud
-    if args.sparse_id >= 0:
-        o3d.io.write_point_cloud(os.path.join(args.data_dir, f"visual_hull_{str(args.sparse_id)}.ply"), pcd)
+    if args.sparse_view_num >= 0:
+        o3d.io.write_point_cloud(os.path.join(args.data_dir, f"visual_hull_{str(args.sparse_view_num)}.ply"), pcd)
     else:
         o3d.io.write_point_cloud(os.path.join(args.data_dir, "visual_hull_full.ply"), pcd)
 

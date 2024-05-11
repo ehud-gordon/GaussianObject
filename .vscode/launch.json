@@ -20,8 +20,24 @@
                 "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
             }
         },
+        {
+            "name": "visual hull12",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "visual_hull.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--sparse_view_num", "12",
+                "--data_dir", "data/helmet2",
+                "--reso", "1",
+                "--not_vis"
+            ],
+            "env": {
+                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
+            }
+        },
         {  
-            "name": "train gs coarse",
+            "name": "train gs coarse 4",
             "type": "debugpy",
             "request": "launch",
             "program": "train_gs.py",
@@ -40,8 +56,28 @@
                 "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
             }
         },
+        {  
+            "name": "train gs coarse 12",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_gs.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-s", "data/helmet2",
+                "-m", "output/gs_init12/helmet2",
+                "-r", "1",
+                "--sparse_view_num", "12",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_12",
+                "--white_background",
+                "--checkpoint_iterations", "1000", "3000", "7000", "10000",
+            ],
+            "env": {
+                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
+            }
+        },
         {
-            "name": "render train set",
+            "name": "render train set 4",
             "type": "debugpy",
             "request": "launch",
             "program": "render.py",
@@ -58,6 +94,22 @@
             "env": {
                 "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
             }
+        },
+        {
+            "name": "render train set 12",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "render.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-m", "output/gs_init12/helmet2",
+                "--sparse_view_num", "12",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_12",
+                "--white_background",
+                "--skip_all",
+                "--skip_test"
+            ],
         },
         {
             "name": "render test set",
