@@ -52,9 +52,22 @@
                 "--white_background",
                 "--checkpoint_iterations", "1000", "3000", "7000", "10000",
             ],
-            "env": {
-                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
-            }
+        },
+        {  
+            "name": "train gs coarse 4",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_gs.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-s", "data/helmet2",
+                "-m", "output/gs_init_30_iter/helmet2",
+                "-r", "1",
+                "--sparse_view_num", "4",
+                "--sh_degree", "3",
+                "--init_pcd_name", "visual_hull_4",
+                "--white_background",
+                "--checkpoint_iterations", "1000", "3000", "7000", "10000",],
         },
         {  
             "name": "train gs coarse 12",
@@ -72,9 +85,6 @@
                 "--white_background",
                 "--checkpoint_iterations", "1000", "3000", "7000", "10000",
             ],
-            "env": {
-                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
-            }
         },
         {
             "name": "render train set 4",
@@ -83,7 +93,7 @@
             "program": "render.py",
             "console": "integratedTerminal",
             "args": [
-                "-m", "output/gs_init/helmet2",
+                "-m", "output/gs_init_30_iter/helmet2",
                 "--sparse_view_num", "4",
                 "--sh_degree", "3",
                 "--init_pcd_name", "visual_hull_4",
@@ -91,9 +101,6 @@
                 "--skip_all",
                 "--skip_test"
             ],
-            "env": {
-                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
-            }
         },
         {
             "name": "render train set 12",
@@ -118,7 +125,7 @@
             "program": "render.py",
             "console": "integratedTerminal",
             "args": [
-                "-m", "output/gs_init/helmet2",
+                "-m", "output/gs_init_5_iter/helmet2",
                 "--sparse_view_num", "4",
                 "--sh_degree", "3",
                 "--init_pcd_name", "visual_hull_4",
@@ -126,9 +133,6 @@
                 "--skip_all",
                 "--skip_train"
             ],
-            "env": {
-                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
-            }
         },
         {
             "name": "leave-one stage1",
@@ -145,9 +149,6 @@
                 "--init_pcd_name", "visual_hull_4",
                 "--white_background",
             ],
-            "env": {
-                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
-            }
         },
         {
             "name": "leave-one stage2",
@@ -164,9 +165,6 @@
                 "--init_pcd_name", "visual_hull_4",
                 "--white_background",
             ],
-            "env": {
-                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
-            }
         },
         {
             "name": "train lora",
@@ -191,9 +189,6 @@
                 "--add_control_lora",
                 "--add_clip_lora"
             ],
-            "env": {
-                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
-            }
         },
         {
             "name": "train repair",
@@ -216,9 +211,6 @@
                 "data.refresh_size=8",
                 "system.sh_degree=3"
             ],
-            "env": {
-                "LD_LIBRARY_PATH": "/home/ehud.gordon/miniconda3/envs/gobj/lib/:${env:LD_LIBRARY_PATH}"
-            }
         },
         {
             "name": "render test lastply", 
