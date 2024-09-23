@@ -1,26 +1,9 @@
-# GaussianObject: Just Taking Four Images to Get A High-Quality 3D Object with Gaussian Splatting
+# Geometric Computer Vision 236861 Final Project
+## Improving Gaussian-Splatting in sparse-setting using Diffusion
+## by: Eldad Matmon and Ehud Gordon
 
-<div align="center">
-<img src='assets/logo.png' style="height:100px"></img>
-</div>
+Look at [report.ipynb](https://github.com/ehud-gordon/GaussianObject/blob/ours/random_poses/report.ipynb) for the project report. 
 
-We propose GaussianObject, a framework to represent and render the 3D object with Gaussian splatting, that achieves high rendering quality with only **4 input images**.
-
-https://github.com/GaussianObject/GaussianObject/assets/158549428/70ae2443-7a6e-4352-abf4-d3abf79779a3
-
-We first introduce techniques of visual hull and floater elimination which explicitly inject structure priors into the initial optimization process for helping build multi-view consistency, yielding a coarse 3D Gaussian representation. Then we construct a Gaussian repair model based on diffusion models to supplement the omitted object information, where Gaussians are further refined. We design a self-generating strategy to obtain image pairs for training the repair model. Our GaussianObject achives strong reconstruction results from only 4 views and significantly outperforms previous state-of-the-art methods.
-
-![pipeline](assets/pipe.png)
-
-- We initialize 3D Gaussians by constructing a visual hull with camera parameters and masked images, optimizing them with the $\mathcal{L}_{\text{gs}}$ and refining through floater elimination.
-- We use a novel `leave-one-out' strategy and add 3D noise to Gaussians to generate corrupted Gaussian renderings. These renderings, paired with their corresponding reference images, facilitate the training of the Gaussian repair model employing $\mathcal{L}_{\text{tune}}$.
-- Once trained, the Gaussian repair model is frozen and used to correct views that need to be rectified. These views are identified through distance-aware sampling. The repaired images and reference images are used to further optimize 3D Gaussians with $`\mathcal{L}_{\text{rep}}`$ and $`\mathcal{L}_{\text{gs}}`$.
-
-## Colab
-
- [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1WIZgM--tJ3aq25t9g238JAuAoXrQYVMs?usp=sharing#scrollTo=TlrxF62GNePB)
-
-[Sang Han](https://github.com/jjangsangy) provides a Colab script for GaussianObject in [#9](https://github.com/GaussianObject/GaussianObject/issues/9). Thanks for the contribution of the community! If you are experiencing issues with insufficient GPU VRAM, try this.
 
 ## Setup
 
@@ -214,8 +197,5 @@ python render.py \
     --load_ply output/gaussian_object/kitchen/save/last.ply
 ```
 
-The rendering results are saved in `output/gs_init/kitchen/test/ours_None` and `output/gs_init/kitchen/render/ours_None`.
-
-## Acknowledgement
-
-Some code of GaussianObject is based on [3DGS](https://github.com/graphdeco-inria/gaussian-splatting), [threestudio](https://github.com/threestudio-project/threestudio) and [ControlNet](https://github.com/lllyasviel/ControlNet). Thanks for their great work!
+# Acknolwedgements
+This project draws inspiration from the GaussianObject project and Gaussian Splatting project by Inria.
